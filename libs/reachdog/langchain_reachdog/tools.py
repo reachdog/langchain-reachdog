@@ -60,8 +60,8 @@ class ReachDogBudget:
         try:
             yield
         except ApiError as exc:
-            if previous is None and not getattr(exc, "ambiguous", True) and exc.status in (400,401,402,403,422,429):
-                self.settle(key, 0)
+            if not getattr(exc, "ambiguous", True) and exc.status in (400,401,402,403,422,429):
+                self.settle(key, previous or 0)
             raise
         finally:
             with self._lock:
@@ -215,4 +215,4 @@ class ReachDogCatalogTool(_Tool):
         with self.budget.reserve(batch_id, billing["quote"]["amount"]):
             self.budget.accepted[batch_id] = binding
             method(batch_id, billing["acceptance"])
-            return {**self.status(batch_id),"approval":"approved by user"}
+        return {**self.status(batch_id),"approval":"approved by user"}
