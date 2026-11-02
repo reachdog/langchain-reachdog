@@ -164,11 +164,11 @@ class ReachDogCatalogTool(_Tool):
         if action == "quote":
             if not body or batch_id or acceptance:
                 raise ToolException("Supply a catalog request body to preview")
-            payload = {"workflow":"catalog_local_v1", "records":body["records"], "parameters":body["parameters"],
-                       "refine_probes":body.get("refine_probes", False)}
-            key = self.key("catalog",payload,run_label)
-            state = self.client.submit_catalog(payload["records"],payload["parameters"],idempotency_key=key,
-                                               refine_probes=payload["refine_probes"]).body
+            payload = {"workflow":"catalog_local_v1", **body}
+            if payload["workflow"] != "catalog_local_v1":
+                raise ToolException("Only the quoted catalog workflow is supported")
+            key = self.key("catalog", payload, run_label)
+            state = self.client.request("POST", "/v1/batches", json=payload, idempotency_key=key).body
             return self.display(state) if state["status"] == "awaiting_acceptance" else self.status(state["id"])
         if not batch_id or any(ch in batch_id for ch in "/?#") or batch_id in (".",".."):
             raise ToolException("Invalid batch ID")
