@@ -1,63 +1,20 @@
-# 🦜️🔗 LangChain {partner}
+# LangChain Reach Dog tools
 
-This repository contains 1 package with {partner} integrations with LangChain:
+Build an installable wheel with `python -m build --wheel libs/reachdog`. Install it with pip, or use `pip install './libs/reachdog[test]'` from a checkout for development. Run `python -m pytest libs/reachdog/tests` for the offline checks.
 
-- [langchain-{package_lower}](https://pypi.org/project/langchain-{package_lower}/)
+Construct ReachDogClient with the HTTPS API origin and bearer key (or set REACHDOG_API_URL and REACHDOG_API_KEY). Pass the same ReachDogBudget instance and stable, nonsecret account_label to every tool in one agent run. The budget counts Reach Dog billing tokens. Supply a host-owned require_confirmation(details) callback which displays the operation and amount and returns True only after approval. The default declines.
 
-## Initial Repo Checklist (Remove this section after completing)
+```python
+from langchain_reachdog import ReachDogBudget, ReachDogClient, ReachDogTitleTool
 
-Welcome to the LangChain Partner Integration Repository! This checklist will help you get started with your new repository.
+client = ReachDogClient()
+tool = ReachDogTitleTool(client=client, budget=ReachDogBudget(max_tokens=limit),
+                         account_label=account_label, require_confirmation=approve)
+preview = tool.invoke({"body": {"title": title, "parameters": ["product_type"]}})
+```
 
-After creating your repo from the integration-repo-template, we'll go through how to
-set up your new repository in Github.
+### Live checks after operator approval
 
-This setup assumes that the partner package is already split. For those instructions,
-see [these docs](https://docs.langchain.com/oss/python/contributing/integrations-langchain).
+Inspect the title preview, invoke again with confirm=True, and check the settlement receipt. Repeat with ReachDogResearchTool using a research subject and supported parameters. Use the catalog tool's quote action to obtain a batch ID, binding and quote. Accept that binding only after reading it. Use status to resume the same batch. A recoverable wallet refusal offers retry_payment, which requires approval again. The `examples/group_csv.py` example takes a CSV, a host-provided model and approval callback to group products and generate descriptions. Changing run_label requests a fresh billable operation.
 
-> [!NOTE]
-> Integration packages can be managed in your own Github organization.
-
-Code (auto ecli)
-
-- [ ] Fill out the readme above (for folks that follow pypi link)
-- [ ] Copy package into /libs folder
-- [ ] Update `"Source Code"` and `repository` under `[project.urls]` in /libs/*/pyproject.toml
-
-Workflow code (auto ecli)
-
-- [ ] Populate .github/workflows/_release.yml with `on.workflow_dispatch.inputs.working-directory.default`
-- [ ] Configure `LIB_DIRS` in .github/scripts/check_diff.py
-
-Workflow code (manual)
-
-- [ ] Add secrets as env vars in .github/workflows/_release.yml
-
-Monorepo workflow code (manual)
-
-- [ ] Pull in new code location, remove old in .github/workflows/api_doc_build.yml
-
-In github (manual)
-
-- [ ] Add any required integration testing secrets in Github
-- [ ] Add any required partner collaborators in Github
-- [ ] "Allow auto-merge" in General Settings (recommended)
-- [ ] Only "Allow squash merging" in General Settings (recommended)
-- [ ] Set up ruleset matching CI build (recommended)
-    - name: ci build
-    - enforcement: active
-    - bypass: write
-    - target: default branch
-    - rules: restrict deletions, require status checks ("CI Success"), block force pushes
-- [ ] Set up ruleset (recommended)
-    - name: require prs
-    - enforcement: active
-    - bypass: none
-    - target: default branch
-    - rules: restrict deletions, require a pull request before merging (0 approvals, no boxes), block force pushes
-
-Pypi (manual)
-
-- [ ] Add new repo to test-pypi and pypi trusted publishing (workflow: `_release.yml`)
-
-> [!NOTE]
-> Tag [@ccurme](https://github.com/ccurme) if you have questions on any step.
+The vendored client and helpers are based on reachdog/reachdog-ecommerce-toolkit at 6437f3b. The client records ambiguous retries for budget accounting.

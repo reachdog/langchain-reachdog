@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langchain-reachdog"
+version = "0.1.0"
+description = "Budgeted title, research and catalog tools for Reach Dog"
+requires-python = ">=3.10"
+dependencies = ["langchain-core>=1,<2", "httpx>=0.27,<1"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "langchain-tests>=1,<2"]
+
+[tool.setuptools.packages.find]
+include = ["langchain_reachdog*"]
