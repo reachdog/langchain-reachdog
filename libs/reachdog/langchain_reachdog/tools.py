@@ -29,8 +29,22 @@ class ReachDogBudget:
         self._lock = RLock()
         self._amounts = {}
         self._active = set()
+        self._catalog_busy = set()
         self.shown = {}
         self.accepted = {}
+
+    @contextmanager
+    def catalog_turn(self, batch_id):
+        # Serialize status observations with payment transitions for the same batch.
+        with self._lock:
+            if batch_id in self._catalog_busy:
+                raise ToolException("Batch operation in progress; resume with status")
+            self._catalog_busy.add(batch_id)
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._catalog_busy.remove(batch_id)
 
     @contextmanager
     def reserve(self, key, amount):
@@ -169,9 +183,16 @@ class ReachDogCatalogTool(_Tool):
                 raise ToolException("Only the quoted catalog workflow is supported")
             key = self.key("catalog", payload, run_label)
             state = self.client.request("POST", "/v1/batches", json=payload, idempotency_key=key).body
-            return self.display(state) if state["status"] == "awaiting_acceptance" else self.status(state["id"])
+            if state["status"] == "awaiting_acceptance":
+                return self.display(state)
+            with self.budget.catalog_turn(state["id"]):
+                return self.status(state["id"])
         if not batch_id or any(ch in batch_id for ch in "/?#") or batch_id in (".",".."):
             raise ToolException("Invalid batch ID")
+        with self.budget.catalog_turn(batch_id):
+            return self._existing(action, batch_id, acceptance)
+
+    def _existing(self, action, batch_id, acceptance):
         if action == "status":
             return self.status(batch_id)
         state = self.client.batch_status(batch_id).body
