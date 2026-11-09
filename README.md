@@ -1,20 +1,50 @@
 # LangChain Reach Dog tools
 
-Build an installable wheel with `python -m build --wheel libs/reachdog`. Install it with pip, or use `pip install './libs/reachdog[test]'` from a checkout for development. Run `python -m pytest libs/reachdog/tests` for the offline checks.
+Add product enrichment, market research and catalog grouping to a LangChain application.
 
-Construct ReachDogClient with the HTTPS API origin and bearer key (or set REACHDOG_API_URL and REACHDOG_API_KEY). Pass the same ReachDogBudget instance and stable, nonsecret account_label to every tool in one agent run. The budget counts Reach Dog billing tokens. Supply a host-owned require_confirmation(details) callback which displays the operation and amount and returns True only after approval. The default declines.
-
-```python
-from langchain_reachdog import ReachDogBudget, ReachDogClient, ReachDogTitleTool
-
-client = ReachDogClient()
-tool = ReachDogTitleTool(client=client, budget=ReachDogBudget(max_tokens=limit),
-                         account_label=account_label, require_confirmation=approve)
-preview = tool.invoke({"body": {"title": title, "parameters": ["product_type"]}})
+```sh
+pip install langchain-reachdog==0.1.0
 ```
 
-### Live checks after operator approval
+Sign in to the [Reach Dog developer console](https://platform.reach.dog/keys), create your account's API key, and set `REACHDOG_API_KEY` in your environment. Every account receives daily free tokens, and API calls use your account's wallet. Your API key's scopes must cover the operations you select.
 
-Inspect the title preview, invoke again with confirm=True, and check the settlement receipt. Repeat with ReachDogResearchTool using a research subject and supported parameters. Use the catalog tool's quote action to obtain a batch ID, binding and quote. Accept that binding only after reading it. Use status to resume the same batch. A recoverable wallet refusal offers retry_payment, which requires approval again. The `examples/group_csv.py` example takes a CSV, a host-provided model and approval callback to group products and generate descriptions. Changing run_label requests a fresh billable operation.
+## First request
 
-The vendored client and helpers are based on reachdog/reachdog-ecommerce-toolkit at 6437f3b. The client records ambiguous retries for budget accounting.
+This example previews a product request and asks you to approve the estimate before sending it.
+
+```python
+import json
+import os
+from langchain_reachdog import ReachDogBudget, ReachDogClient, ReachDogTitleTool
+
+
+def approve(details):
+    print(json.dumps(details, indent=2))
+    return input("Approve this request? [y/N] ").strip().lower() == "y"
+
+
+client = ReachDogClient(
+    base_url="https://api.reach.dog",
+    api_key=os.environ["REACHDOG_API_KEY"],
+)
+budget = ReachDogBudget()
+tool = ReachDogTitleTool(
+    client=client,
+    budget=budget,
+    account_label="my-application",
+    require_confirmation=approve,
+)
+request = {"body": {"title": input("Product title: "), "parameters": ["product_type"]}}
+print(tool.invoke(request))
+print(tool.invoke({**request, "confirm": True}))
+```
+
+`ReachDogResearchTool` and `ReachDogCatalogTool` share the same client, budget and approval callback. Set `ReachDogBudget(max_tokens=YOUR_LIMIT)` to constrain estimated spending across an agent run. The unit is Reach Dog billing tokens. The default approval callback declines. Catalog processing uses quote, accept and status actions, and payment retry requires approval again. Reuse `run_label` when recovering the same operation. Change it when deliberately requesting new work.
+
+See the [API reference](https://platform.reach.dog/docs/api-reference) and [catalog workflow](https://platform.reach.dog/docs/catalog-workflow) for scopes, request bodies and payment recovery. Report bugs in [GitHub issues](https://github.com/reachdog/langchain-reachdog/issues) with the package version and error code.
+
+The vendored client and helpers are based on reachdog/reachdog-ecommerce-toolkit at 6437f3b. The client records ambiguous retries for budget accounting. The package is MIT licensed. API calls use your Reach Dog account's available tokens.
+
+## Build from source
+
+Build the wheel and source archive with `python -m build libs/reachdog`. For development, install `./libs/reachdog[test]` and run `python -m pytest libs/reachdog/tests`.
