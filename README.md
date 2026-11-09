@@ -6,7 +6,7 @@ Add product enrichment, market research and catalog grouping to a LangChain appl
 pip install langchain-reachdog==0.1.0
 ```
 
-Sign in to the [Reach Dog developer console](https://platform.reach.dog/keys), create your account's API key, and set `REACHDOG_API_KEY` in your environment. Use GitHub sign-in for the existing developer free-token access. Your API key's scopes must cover the operations you select.
+Sign in to the [Reach Dog developer console](https://platform.reach.dog/keys), create your account's API key, and set `REACHDOG_API_KEY` in your environment. Every account receives daily free tokens, and API calls use your account's wallet. Your API key's scopes must cover the operations you select.
 
 ## First request
 
